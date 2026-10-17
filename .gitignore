@@ -1,7 +1,16 @@
-# ignore node_modules
-/backEnd/node_modules
-/frontEnd/node_modules
-/node_modules
+# Ignore node_modules
+/backEnd/node_modules/
+/frontEnd/node_modules/
+/node_modules/
 
-# ignore instructions
+# Ignore environment files
+/backEnd/.env
+/backEnd/config/.env
+/frontEnd/.env
+.env
+
+# Ignore instructions
 instructions.md
+
+# Ignore sample file
+sample.js
