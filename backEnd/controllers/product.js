@@ -127,25 +127,30 @@ exports.updateProduct = async (req, res, next) => {
     // }
     if (typeof req.body.images === 'string') {
         images.push(req.body.images)
-    } else {
+    } else if (req.body.images) {
         images = req.body.images
     }
     // console.log(images)
 
-    let imagesLinks = [];
-    for (let i = 0; i < images.length; i++) {
-        const result = await cloudinary.v2.uploader.upload(images[i], {
-            folder: 'products',
-            width: 150,
-            crop: "scale",
-        });
-        imagesLinks.push({
-            public_id: result.public_id,
-            url: result.secure_url
-        })
+    // only replace the images when new ones were uploaded, otherwise keep the old ones
+    if (images.length > 0) {
+        let imagesLinks = [];
+        for (let i = 0; i < images.length; i++) {
+            const result = await cloudinary.v2.uploader.upload(images[i], {
+                folder: 'products',
+                width: 150,
+                crop: "scale",
+            });
+            imagesLinks.push({
+                public_id: result.public_id,
+                url: result.secure_url
+            })
 
+        }
+        req.body.images = imagesLinks
+    } else {
+        delete req.body.images
     }
-    req.body.images = imagesLinks
     product = await Product.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
         runValidators: true,
@@ -170,6 +175,29 @@ exports.deleteProduct = async (req, res, next) => {
     return res.status(200).json({
         success: true,
         message: 'Product deleted'
+    })
+}
+
+exports.deleteProducts = async (req, res, next) => {
+    const { ids } = req.body
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Please select products to delete'
+        })
+    }
+
+    const result = await Product.deleteMany({ _id: { $in: ids } })
+    if (result.deletedCount === 0) {
+        return res.status(404).json({
+            success: false,
+            message: 'Products not found'
+        })
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: `${result.deletedCount} product(s) deleted`
     })
 }
 

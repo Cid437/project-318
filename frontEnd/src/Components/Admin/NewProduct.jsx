@@ -17,7 +17,7 @@ const NewProduct = () => {
     const [name, setName] = useState('');
     const [price, setPrice] = useState(0);
     const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('');
+    const [category, setCategory] = useState('Engine Parts');
     const [stock, setStock] = useState(0);
     const [seller, setSeller] = useState('');
     const [images, setImages] = useState([]);
@@ -28,18 +28,15 @@ const NewProduct = () => {
     // const [product, setProduct] = useState({})
 
     const categories = [
-        'Electronics',
-        'Cameras',
-        'Laptops',
+        'Engine Parts',
+        'Brakes',
+        'Tires/Wheels',
+        'Oils/Lubricants',
+        'Batteries/Electrical',
+        'Helmets',
+        'Riding Gear',
         'Accessories',
-        'Headphones',
-        'Food',
-        "Books",
-        'Clothes/Shoes',
-        'Beauty/Health',
-        'Sports',
-        'Outdoor',
-        'Home'
+        'Services'
     ]
 
     let navigate = useNavigate()

@@ -18,6 +18,9 @@ import {
     DELETE_PRODUCT_REQUEST,
     DELETE_PRODUCT_SUCCESS,
     DELETE_PRODUCT_FAIL,
+    DELETE_PRODUCTS_REQUEST,
+    DELETE_PRODUCTS_SUCCESS,
+    DELETE_PRODUCTS_FAIL,
 
     CLEAR_ERRORS
 } from '../constants/productConstants';
@@ -169,6 +172,34 @@ export const deleteProduct = (id) => async (dispatch) => {
     } catch (error) {
         dispatch({
             type: DELETE_PRODUCT_FAIL,
+            payload: error.response.data.message
+        })
+    }
+}
+
+export const deleteProducts = (ids) => async (dispatch) => {
+    try {
+
+        dispatch({ type: DELETE_PRODUCTS_REQUEST })
+        const config = {
+            headers: {
+                'Content-Type': 'application/json',
+
+            },
+            withCredentials: true,
+            data: { ids }
+        }
+
+        const { data } = await axios.delete(`${import.meta.env.VITE_API}/admin/products`, config)
+
+        dispatch({
+            type: DELETE_PRODUCTS_SUCCESS,
+            payload: data.success
+        })
+
+    } catch (error) {
+        dispatch({
+            type: DELETE_PRODUCTS_FAIL,
             payload: error.response.data.message
         })
     }

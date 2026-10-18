@@ -32,18 +32,15 @@ const UpdateProduct = () => {
     // const [isUpdated, setIsUpdated] = useState(false)
 
     const categories = [
-        'Electronics',
-        'Cameras',
-        'Laptops',
+        'Engine Parts',
+        'Brakes',
+        'Tires/Wheels',
+        'Oils/Lubricants',
+        'Batteries/Electrical',
+        'Helmets',
+        'Riding Gear',
         'Accessories',
-        'Headphones',
-        'Food',
-        "Books",
-        'Clothes/Shoes',
-        'Beauty/Health',
-        'Sports',
-        'Outdoor',
-        'Home'
+        'Services'
     ]
     let { id } = useParams();
     let navigate = useNavigate();

@@ -10,10 +10,12 @@ import axios from 'axios'
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { DataGrid, } from '@mui/x-data-grid'
+import Swal from 'sweetalert2'
 import { useDispatch, useSelector } from 'react-redux'
 import {
     getAdminProducts,
     deleteProduct,
+    deleteProducts,
     clearErrors,
 } from '../../actions/productActions'
 import { DELETE_PRODUCT_RESET } from '../../constants/productConstants'
@@ -24,6 +26,7 @@ const ProductsList = () => {
     const dispatch = useDispatch();
     const { loading, error, products } = useSelector(state => state.products)
     const { error: deleteError, isDeleted } = useSelector(state => state.product)
+    const [selectionModel, setSelectionModel] = useState({ type: 'include', ids: new Set() })
 
     // const [deleteError, setDeleteError] = useState('')
 
@@ -95,6 +98,21 @@ const ProductsList = () => {
         dispatch(deleteProduct(id))
     }
 
+    const deleteSelectedHandler = () => {
+        Swal.fire({
+            title: 'Delete Products',
+            icon: 'warning',
+            text: `Do you want to delete ${selectionModel.ids.size} selected product(s)?`,
+            confirmButtonText: 'Delete',
+            showCancelButton: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                dispatch(deleteProducts(Array.from(selectionModel.ids)))
+                setSelectionModel({ type: 'include', ids: new Set() })
+            }
+        })
+    }
+
     useEffect(() => {
         dispatch(getAdminProducts())
 
@@ -121,7 +139,7 @@ const ProductsList = () => {
 
         }
 
-    }, [error, deleteError,])
+    }, [dispatch, error, deleteError, isDeleted])
 
     const columns = [
         {
@@ -195,6 +213,14 @@ const ProductsList = () => {
                     <>
                         <h1 className="my-5">All Products</h1>
 
+                        <button
+                            className="btn btn-danger mb-3"
+                            onClick={deleteSelectedHandler}
+                            disabled={selectionModel.ids.size === 0}
+                        >
+                            Delete Selected ({selectionModel.ids.size})
+                        </button>
+
                         {loading ? <Loader /> : (
                             <div style={{ width: '100%' }}>
                                 <DataGrid
@@ -203,7 +229,11 @@ const ProductsList = () => {
 
                                     pageSize={5}
                                     rowsPerPageOptions={[5, 10, 25]}
-                                    disableSelectionOnClick
+                                    checkboxSelection
+                                    disableRowSelectionOnClick
+                                    disableRowSelectionExcludeModel
+                                    rowSelectionModel={selectionModel}
+                                    onRowSelectionModelChange={(model) => setSelectionModel(model)}
                                     getRowId={(row) => row.id}
                                     showToolbar
                                 />
