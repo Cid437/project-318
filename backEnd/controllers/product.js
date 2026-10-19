@@ -82,9 +82,11 @@ exports.getProducts = async (req, res) => {
     const apiFeatures = new APIFeatures(Product.find(), req.query).search().filter()
     // .filter()
 
+    // count the filtered products before pagination limits the result
+    const filteredProductsCount = await Product.countDocuments(apiFeatures.query.getFilter());
+
     apiFeatures.pagination(resPerPage);
     const products = await apiFeatures.query;
-    let filteredProductsCount = products.length;
     // const products = await apiFeatures.query;
 
     if (!products)

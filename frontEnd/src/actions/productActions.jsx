@@ -25,16 +25,16 @@ import {
     CLEAR_ERRORS
 } from '../constants/productConstants';
 
-export const getProducts = (currentPage = 1, keyword = '', price, category = '') => async (dispatch) => {
+export const getProducts = (currentPage = 1, keyword = '', price, category = '', rating = 0, reviews = 0) => async (dispatch) => {
     try {
         dispatch({
             type: ALL_PRODUCTS_REQUEST
         })
 
-        let link = `${import.meta.env.VITE_API}/products?page=${currentPage}&keyword=${keyword}&price[lte]=${price[1]}&price[gte]=${price[0]}`
+        let link = `${import.meta.env.VITE_API}/products?page=${currentPage}&keyword=${keyword}&price[lte]=${price[1]}&price[gte]=${price[0]}&ratings[gte]=${rating}&numOfReviews[gte]=${reviews}`
 
         if (category) {
-            link = `${import.meta.env.VITE_API}/products?keyword=${keyword}&page=${currentPage}&price[lte]=${price[1]}&price[gte]=${price[0]}&category=${category}`
+            link = `${link}&category=${category}`
         }
         const { data } = await axios.get(link)
         console.log(data)

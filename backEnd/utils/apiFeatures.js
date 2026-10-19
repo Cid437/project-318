@@ -14,7 +14,6 @@ class APIFeatures {
             }
         } : {}
 
-        console.log(this.query, this.queryStr);
         this.query = this.query.find({ ...keyword });
         return this;
     }
@@ -49,6 +48,21 @@ class APIFeatures {
         console.log(queryCopy);
 
         this.query = this.query.find(priceFilter);
+
+        // category=Brakes
+        if (queryCopy.category) {
+            this.query = this.query.find({ category: queryCopy.category });
+        }
+
+        // { 'ratings[gte]': '4' } 0 means no ratings filter
+        if (Number(queryCopy['ratings[gte]']) > 0) {
+            this.query = this.query.find({ ratings: { $gte: Number(queryCopy['ratings[gte]']) } });
+        }
+
+        // { 'numOfReviews[gte]': '5' } 0 means no reviews filter
+        if (Number(queryCopy['numOfReviews[gte]']) > 0) {
+            this.query = this.query.find({ numOfReviews: { $gte: Number(queryCopy['numOfReviews[gte]']) } });
+        }
         return this;
     }
 
