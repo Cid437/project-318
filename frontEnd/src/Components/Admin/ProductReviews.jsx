@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react'
 
 
 import MetaData from '../Layout/MetaData'
-import Loader from '../Layout/Loader'
 import Sidebar from './SideBar'
-// import Toast from '../Layout/Toast'
 import Swal from 'sweetalert2'
-import { getUser, getToken, errMsg } from '../Utils/helpers'
+import { errMsg, successMsg } from '../Utils/helpers'
 import axios from 'axios'
 import { DataGrid, } from '@mui/x-data-grid'
 
@@ -18,13 +16,13 @@ const ProductReviews = () => {
     const [listReviews, setListReviews] = useState([])
     const [deleteError, setDeleteError] = useState('')
     const [isDeleted, setIsDeleted] = useState(false)
-    const [user, setUser] = useState(getUser())
 
+    // the login cookie is sent with withCredentials (the server does not read a Bearer token)
     const config = {
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`
-        }
+        },
+        withCredentials: true
     }
 
     const getProductReviews = async (id) => {
@@ -34,7 +32,8 @@ const ProductReviews = () => {
             setListReviews(data.reviews)
 
         } catch (error) {
-            setError(error.response.data.message)
+            setListReviews([])
+            setError(error.response.data.message || 'Product not found')
         }
     }
     const deleteReview = async (id, productId) => {
@@ -63,24 +62,21 @@ const ProductReviews = () => {
     }
     useEffect(() => {
         if (error) {
-
+            errMsg(error)
             setError('')
         }
 
         if (deleteError) {
-
+            errMsg(deleteError)
             setDeleteError('')
         }
 
-        if (productId !== '') {
+        if (isDeleted) {
+            successMsg('Review deleted successfully');
+            setIsDeleted(false)
             getProductReviews(productId)
         }
-
-        if (isDeleted) {
-            errMsg('Review deleted successfully', 'success');
-            setIsDeleted(false)
-        }
-    }, [error, productId, isDeleted, deleteError])
+    }, [error, isDeleted, deleteError])
 
     const submitHandler = (e) => {
         e.preventDefault();
@@ -105,16 +101,12 @@ const ProductReviews = () => {
         {
             field: 'comment',
             headerName: 'Comment',
-            width: 120,
-            align: 'right',
-            headerAlign: 'right'
+            flex: 1,
         },
         {
             field: 'user',
             headerName: 'User',
-            width: 120,
-            align: 'right',
-            headerAlign: 'right'
+            width: 150,
         },
 
         {
@@ -138,7 +130,7 @@ const ProductReviews = () => {
         id: review._id,
         comment: review.comment,
         rating: review.rating,
-        user: review.user,
+        user: review.name,
     }));
 
 

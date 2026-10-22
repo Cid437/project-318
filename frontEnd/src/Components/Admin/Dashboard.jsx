@@ -1,62 +1,40 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom';
 
 import MetaData from '../Layout/MetaData'
 import Loader from '../Layout/Loader'
 import Sidebar from './SideBar'
-import { getToken } from '../Utils/helpers';
-import axios from 'axios'
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import ProductSalesChart from './ProductSalesChart';
 import UserSalesChart from './UserSalesChart';
 import MonthlySalesChart from './MonthlySalesChart';
 import { useDispatch, useSelector } from 'react-redux'
+import { getAdminProducts } from '../../actions/productActions'
+import { allOrders } from '../../actions/orderActions'
+import { allUsers } from '../../actions/userActions'
 
 
 const Dashboard = () => {
-    const { loading, error, products } = useSelector(state => state.products)
+    const dispatch = useDispatch()
+    const { loading, products } = useSelector(state => state.products)
+    const { orders, totalAmount } = useSelector(state => state.allOrders)
+    const { users } = useSelector(state => state.allUsers)
 
-    // const [products, setProducts] = useState([])
-    // const [error, setError] = useState('')
-    // const [users, setUsers] = useState([])
-    // const [orders, setOrders] = useState([])
-    // const [loading, setLoading] = useState(false)
-    // const [totalAmount, setTotalAmount] = useState([])
     let outOfStock = 0;
-    // products.forEach(product => {
-    //     if (product.stock === 0) {
-    //         outOfStock += 1;
-    //     }
-    // })
-    // const getAdminProducts = async () => {
-    //     try {
+    products.forEach(product => {
+        if (product.stock === 0) {
+            outOfStock += 1;
+        }
+    })
 
-    //         const config = {
-    //             headers: {
-    //                 'Authorization': `Bearer ${getToken()}`
-    //             }
-    //         }
-
-    //         const { data } = await axios.get(`${import.meta.env.VITE_API}/admin/products`, config)
-    //         console.log(data)
-    //         setProducts(data.products)
-    //         setLoading(false)
-    //     } catch (error) {
-
-    //         setError(error.response.data.message)
-
-    //     }
-    // }
-
-    // useEffect(() => {
-    //     getAdminProducts()
-    //     // allOrders()
-    //     // allUsers()
-    // }, [])
+    useEffect(() => {
+        dispatch(getAdminProducts())
+        dispatch(allOrders())
+        dispatch(allUsers())
+    }, [dispatch])
 
     return (
         <>
+            <MetaData title={'Admin Dashboard'} />
             <div className="row">
                 <div className="col-12 col-md-2">
                     <Sidebar />
@@ -67,15 +45,12 @@ const Dashboard = () => {
 
                     {loading ? <Loader /> : (
                         <>
-                            <MetaData title={'Admin Dashboard'} />
-
                             <div className="row pr-4">
                                 <div className="col-xl-12 col-sm-12 mb-3">
                                     <div className="card text-white bg-primary o-hidden h-100">
                                         <div className="card-body">
-                                            {/* <div className="text-center card-font-size">Total Amount<br /> <b>${totalAmount && totalAmount.toFixed(2)}</b>
-                                            </div> */}
-
+                                            <div className="text-center card-font-size">Total Amount<br /> <b>${totalAmount ? totalAmount.toFixed(2) : '0.00'}</b>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -98,9 +73,9 @@ const Dashboard = () => {
                                 <div className="col-xl-3 col-sm-6 mb-3">
                                     <div className="card text-white bg-danger o-hidden h-100">
 
-                                        {/* <div className="card-body">
+                                        <div className="card-body">
                                             <div className="text-center card-font-size">Orders<br /> <b>{orders && orders.length}</b></div>
-                                        </div> */}
+                                        </div>
 
                                         <Link className="card-footer text-white clearfix small z-1" to="/admin/orders">
                                             <span className="float-left">View Details</span>
@@ -115,9 +90,9 @@ const Dashboard = () => {
                                 <div className="col-xl-3 col-sm-6 mb-3">
                                     <div className="card text-white bg-info o-hidden h-100">
 
-                                        {/* <div className="card-body">
+                                        <div className="card-body">
                                             <div className="text-center card-font-size">Users<br /> <b>{users && users.length}</b></div>
-                                        </div> */}
+                                        </div>
 
                                         <Link className="card-footer text-white clearfix small z-1" to="/admin/users">
                                             <span className="float-left">View Details</span>
@@ -129,10 +104,6 @@ const Dashboard = () => {
                                 </div>
                                 <div className="col-xl-3 col-sm-6 mb-3">
                                     <div className="card text-white bg-warning o-hidden h-100">
-                                        {/*<div className="card-body">
-                                            <div className="text-center card-font-size">Out of Stock<br /> <b>0</b></div>
-                                        </div>*/}
-
                                         <div className="card-body">
                                             <div className="text-center card-font-size">Out of Stock<br /> <b>{outOfStock}</b></div>
                                         </div>
@@ -142,17 +113,10 @@ const Dashboard = () => {
                         </>
                     )}
 
-
-                </div>
-                <>
-                    <ProductSalesChart />
-                </>
-                <>
-                    <UserSalesChart />
-                </>
-                <>
                     <MonthlySalesChart />
-                </>
+                    <UserSalesChart />
+                    <ProductSalesChart />
+                </div>
 
             </div >
         </ >

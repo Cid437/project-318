@@ -1,26 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import Product from './Product/Product'
-// import products from '../products.json'
-import Stack from '@mui/material/Stack'
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import MetaData from './Layout/MetaData'
 import Loader from './Layout/Loader';
-import Pagination from '@mui/material/Pagination';
-import axios from 'axios'
 
 import { useDispatch, useSelector } from 'react-redux'
 import { getProducts } from '../actions/productActions'
 
 const Home = () => {
-    // console.log(products)
-    // const [products, setProducts] = useState([])
     const [price, setPrice] = useState([0, 100000]);
-    // const [loading, setLoading] = useState(true)
-    // const [productsCount, setProductsCount] = useState(0)
-    // const [resPerPage, setResPerPage] = useState(0)
-    // const [filteredProductsCount, setFilteredProductsCount] = useState(0)
     const [currentPage, setCurrentPage] = useState(1)
     const [category, setCategory] = useState('')
     const [rating, setRating] = useState(0)
@@ -38,25 +28,10 @@ const Home = () => {
     ]
     let { keyword } = useParams();
     const dispatch = useDispatch();
-    const { loading, products, error, resPerPage, filteredProductsCount } = useSelector(state => state.products);
+    const { loading, products, filteredProductsCount } = useSelector(state => state.products);
 
-    const count = filteredProductsCount;
-
-
-
-    // const getProducts = async (keyword = '', price, page = 1) => {
-
-    //     let link = `http://localhost:4001/api/v1/products?keyword=${keyword}&price[gte]=${price[0]}&price[lte]=${price[1]}&page=${page}`
-    //     // http://localhost:4001/api/v1/products?keyword=''
-    //     // http://localhost:4001/api/v1/products?keyword=adid&page=1&price[gte]=100&price[lte]=1000
-    //     let res = await axios.get(link)
-    //     console.log(res.data.products)
-    //     setProducts(res.data.products)
-    //     setProductsCount(res.data.productsCount)
-    //     setFilteredProductsCount(res.data.filteredProductsCount)
-    //     setResPerPage(res.data.resPerPage)
-    //     setLoading(false)
-    // }
+    // more products are available while we have loaded fewer than the filtered total
+    const hasMore = products.length < filteredProductsCount;
 
     const handleChange = (event, newValue) => {
         setPrice(newValue);
@@ -66,14 +41,28 @@ const Home = () => {
     function valuetext(price) {
         return `P${price.toString()}`;
     }
-    // getProducts()
-    // useEffect(() => {
-    //     // getProducts(keyword, price, currentPage)
-    // }, [keyword, price, currentPage]);
-    useEffect(() => {
 
+    // a new search starts again from the first page
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [keyword]);
+
+    useEffect(() => {
         dispatch(getProducts(currentPage, keyword, price, category, rating, reviews))
     }, [currentPage, keyword, price, category, rating, reviews]);
+
+    // infinite scroll: when the user reaches the bottom, load the next page
+    useEffect(() => {
+        const loadMore = () => {
+            const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 200
+            if (nearBottom && !loading && hasMore) {
+                setCurrentPage(page => page + 1)
+            }
+        }
+        window.addEventListener('scroll', loadMore)
+        loadMore() // also check right away in case the loaded products do not fill the screen
+        return () => window.removeEventListener('scroll', loadMore)
+    }, [loading, hasMore, products.length]);
 
     return (
         <>
@@ -164,7 +153,7 @@ const Home = () => {
                         </div>
 
                         <div className="col-6 col-md-9">
-                            {loading ? <Loader /> : (
+                            {loading && products.length === 0 ? <Loader /> : (
                                 <>
                                     <div className="row">
                                         {products.map(product => (
@@ -174,26 +163,11 @@ const Home = () => {
                                     {loading === false && products.length === 0 && (
                                         <p className="mt-5 text-center">No products found.</p>
                                     )}
-                                    {resPerPage < count && (
-                                        <div className="d-flex justify-content-center mt-5">
-                                            <Stack spacing={2}>
-                                                <Pagination
-                                                    count={Math.ceil(count / resPerPage)}
-                                                    page={currentPage}
-                                                    onChange={(event, value) => setCurrentPage(value)}
-                                                    color="primary"
-                                                    variant="outlined"
-                                                    shape="rounded"
-                                                    showFirstButton
-                                                    showLastButton
-                                                    size="large"
-                                                    sx={{
-                                                        backgroundColor: 'white',
-
-                                                    }}
-                                                />
-                                            </Stack>
-                                        </div>
+                                    {loading && products.length > 0 && (
+                                        <p className="mt-4 text-center">Loading more products...</p>
+                                    )}
+                                    {loading === false && products.length > 0 && !hasMore && (
+                                        <p className="mt-4 text-center text-muted">You have reached the end.</p>
                                     )}
                                 </>
                             )}

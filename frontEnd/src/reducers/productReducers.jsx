@@ -9,6 +9,10 @@ import {
     NEW_PRODUCT_SUCCESS,
     NEW_PRODUCT_RESET,
     NEW_PRODUCT_FAIL,
+    NEW_REVIEW_REQUEST,
+    NEW_REVIEW_SUCCESS,
+    NEW_REVIEW_RESET,
+    NEW_REVIEW_FAIL,
 
     ADMIN_PRODUCTS_REQUEST,
     ADMIN_PRODUCTS_SUCCESS,
@@ -32,6 +36,12 @@ import {
 export const productsReducer = (state = { products: [] }, action) => {
     switch (action.type) {
         case ALL_PRODUCTS_REQUEST:
+            // payload is the page number: keep the list while loading page 2, 3, ... (infinite scroll)
+            return {
+                ...state,
+                loading: true,
+                products: action.payload > 1 ? state.products : []
+            }
         case ADMIN_PRODUCTS_REQUEST:
             return {
                 ...state,
@@ -39,12 +49,12 @@ export const productsReducer = (state = { products: [] }, action) => {
                 products: []
             }
         case ALL_PRODUCTS_SUCCESS:
-
-
             return {
                 ...state,
                 loading: false,
-                products: action.payload.products,
+                products: action.payload.currentPage > 1
+                    ? [...state.products, ...action.payload.products]
+                    : action.payload.products,
                 productsCount: action.payload.productsCount,
                 resPerPage: action.payload.resPerPage,
                 filteredProductsCount: action.payload.filteredProductsCount
@@ -125,6 +135,7 @@ export const newProductReducer = (state = { product: {} }, action) => {
         case NEW_PRODUCT_FAIL:
             return {
                 ...state,
+                loading: false,
                 error: action.payload
             }
         case NEW_PRODUCT_RESET:
@@ -174,6 +185,7 @@ export const productReducer = (state = {}, action) => {
         case UPDATE_PRODUCT_FAIL:
             return {
                 ...state,
+                loading: false,
                 error: action.payload
             }
 
@@ -213,6 +225,7 @@ export const newReviewReducer = (state = {}, action) => {
         case NEW_REVIEW_FAIL:
             return {
                 ...state,
+                loading: false,
                 error: action.payload
             }
         case NEW_REVIEW_RESET:

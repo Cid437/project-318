@@ -9,6 +9,9 @@ import {
     NEW_PRODUCT_REQUEST,
     NEW_PRODUCT_SUCCESS,
     NEW_PRODUCT_FAIL,
+    NEW_REVIEW_REQUEST,
+    NEW_REVIEW_SUCCESS,
+    NEW_REVIEW_FAIL,
     UPDATE_PRODUCT_REQUEST,
     UPDATE_PRODUCT_SUCCESS,
     UPDATE_PRODUCT_FAIL,
@@ -27,8 +30,10 @@ import {
 
 export const getProducts = (currentPage = 1, keyword = '', price, category = '', rating = 0, reviews = 0) => async (dispatch) => {
     try {
+        // the page number tells the reducer to append (infinite scroll) or start a new list
         dispatch({
-            type: ALL_PRODUCTS_REQUEST
+            type: ALL_PRODUCTS_REQUEST,
+            payload: currentPage
         })
 
         let link = `${import.meta.env.VITE_API}/products?page=${currentPage}&keyword=${keyword}&price[lte]=${price[1]}&price[gte]=${price[0]}&ratings[gte]=${rating}&numOfReviews[gte]=${reviews}`
@@ -37,10 +42,9 @@ export const getProducts = (currentPage = 1, keyword = '', price, category = '',
             link = `${link}&category=${category}`
         }
         const { data } = await axios.get(link)
-        console.log(data)
         dispatch({
             type: ALL_PRODUCTS_SUCCESS,
-            payload: data
+            payload: { ...data, currentPage }
         })
 
     } catch (error) {
@@ -66,25 +70,6 @@ export const getProductDetails = (id) => async (dispatch) => {
         })
     }
 }
-
-// export const getAdminProducts = () => async (dispatch) => {
-//     try {
-//         dispatch({ type: ADMIN_PRODUCTS_REQUEST })
-//         const { data } = await axios.get(`${import.meta.env.VITE_API}/admin/products`, {
-//             //AxiosRequestConfig parameter
-//             withCredentials: true //correct
-//         })
-//         dispatch({
-//             type: ADMIN_PRODUCTS_SUCCESS,
-//             payload: data.products
-//         })
-//     } catch (error) {
-//         dispatch({
-//             type: ADMIN_PRODUCTS_FAIL,
-//             payload: error.response.data.message
-//         })
-//     }
-// }
 
 export const newProduct = (productData) => async (dispatch) => {
     try {

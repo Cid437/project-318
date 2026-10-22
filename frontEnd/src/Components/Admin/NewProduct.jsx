@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MetaData from '../Layout/MetaData'
 import Sidebar from './SideBar'
-// import { getToken } from '../Utils/helpers'
-// import axios from 'axios'
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
 import { useDispatch, useSelector } from 'react-redux'
 import { newProduct, clearErrors } from '../../actions/productActions'
 import { NEW_PRODUCT_RESET } from '../../constants/productConstants'
@@ -14,18 +14,8 @@ const NewProduct = () => {
     const dispatch = useDispatch()
     const { loading, error, success } = useSelector(state => state.newProduct)
 
-    const [name, setName] = useState('');
-    const [price, setPrice] = useState(0);
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('Engine Parts');
-    const [stock, setStock] = useState(0);
-    const [seller, setSeller] = useState('');
     const [images, setImages] = useState([]);
     const [imagesPreview, setImagesPreview] = useState([])
-    // const [error, setError] = useState('')
-    // const [loading, setLoading] = useState(true)
-    // const [success, setSuccess] = useState('')
-    // const [product, setProduct] = useState({})
 
     const categories = [
         'Engine Parts',
@@ -41,23 +31,47 @@ const NewProduct = () => {
 
     let navigate = useNavigate()
 
-    const submitHandler = (e) => {
-        e.preventDefault();
+    // form values and validation rules (Formik + Yup)
+    const formik = useFormik({
+        initialValues: {
+            name: '',
+            price: '',
+            description: '',
+            category: 'Engine Parts',
+            stock: '',
+            seller: '',
+        },
+        validationSchema: Yup.object({
+            name: Yup.string().trim().required('Product name is required').max(100, 'Name cannot exceed 100 characters'),
+            price: Yup.number().typeError('Price must be a number').positive('Price must be greater than 0').max(99999, 'Price cannot exceed 99999').required('Price is required'),
+            description: Yup.string().trim().required('Description is required'),
+            category: Yup.string().required('Please select a category'),
+            stock: Yup.number().typeError('Stock must be a number').integer('Stock must be a whole number').min(0, 'Stock cannot be negative').max(99999, 'Stock cannot exceed 99999').required('Stock is required'),
+            seller: Yup.string().trim().required('Seller name is required'),
+        }),
+        onSubmit: (values) => {
+            if (images.length === 0) {
+                toast.error('Please choose at least one image', {
+                    position: 'bottom-right'
+                });
+                return
+            }
 
-        const formData = new FormData();
-        formData.set('name', name);
-        formData.set('price', price);
-        formData.set('description', description);
-        formData.set('category', category);
-        formData.set('stock', stock);
-        formData.set('seller', seller);
+            const formData = new FormData();
+            formData.set('name', values.name);
+            formData.set('price', values.price);
+            formData.set('description', values.description);
+            formData.set('category', values.category);
+            formData.set('stock', values.stock);
+            formData.set('seller', values.seller);
 
-        images.forEach(image => {
-            formData.append('images', image)
-        })
+            images.forEach(image => {
+                formData.append('images', image)
+            })
 
-        dispatch(newProduct(formData))
-    }
+            dispatch(newProduct(formData))
+        }
+    })
 
     const onChange = e => {
         const files = Array.from(e.target.files)
@@ -73,46 +87,9 @@ const NewProduct = () => {
             }
 
             reader.readAsDataURL(file)
-            // console.log(reader)
         })
 
     }
-    // const newProduct = async (formData) => {
-
-    //     try {
-    //         const config = {
-    //             headers: {
-    //                 'Content-Type': 'application/json',
-    //                 'Authorization': `Bearer ${getToken()}`
-    //             }
-    //         }
-
-    //         const { data } = await axios.post(`${import.meta.env.VITE_API}/admin/product/new`, formData, config)
-    //         setLoading(false)
-    //         setSuccess(data.success)
-    //         setProduct(data.product)
-    //     } catch (error) {
-    //         setError(error.response.data.message)
-
-    //     }
-    // }
-    // useEffect(() => {
-
-    //     if (error) {
-    //         toast.error(error, {
-    //             position: 'bottom-right'
-    //         });
-    //     }
-
-    //     if (success) {
-    //         navigate('/admin/products');
-    //         toast.success('Product created successfully', {
-    //             position: 'bottom-right'
-    //         })
-
-    //     }
-
-    // }, [error, success,])
 
     useEffect(() => {
         if (error) {
@@ -145,7 +122,7 @@ const NewProduct = () => {
                 <div className="col-12 col-md-10">
                     <>
                         <div className="wrapper my-5">
-                            <form className="shadow-lg" onSubmit={submitHandler} encType='multipart/form-data'>
+                            <form className="shadow-lg" onSubmit={formik.handleSubmit} encType='multipart/form-data'>
                                 <h1 className="mb-4">New Product</h1>
 
                                 <div className="form-group">
@@ -154,9 +131,9 @@ const NewProduct = () => {
                                         type="text"
                                         id="name_field"
                                         className="form-control"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
+                                        {...formik.getFieldProps('name')}
                                     />
+                                    {formik.touched.name && formik.errors.name && <div className="text-danger small">{formik.errors.name}</div>}
                                 </div>
 
                                 <div className="form-group">
@@ -165,24 +142,26 @@ const NewProduct = () => {
                                         type="text"
                                         id="price_field"
                                         className="form-control"
-                                        value={price}
-                                        onChange={(e) => setPrice(e.target.value)}
+                                        {...formik.getFieldProps('price')}
                                     />
+                                    {formik.touched.price && formik.errors.price && <div className="text-danger small">{formik.errors.price}</div>}
                                 </div>
 
                                 <div className="form-group">
                                     <label htmlFor="description_field">Description</label>
-                                    <textarea className="form-control" id="description_field" rows="8" value={description} onChange={(e) => setDescription(e.target.value)}></textarea>
+                                    <textarea className="form-control" id="description_field" rows="8" {...formik.getFieldProps('description')}></textarea>
+                                    {formik.touched.description && formik.errors.description && <div className="text-danger small">{formik.errors.description}</div>}
                                 </div>
 
                                 <div className="form-group">
                                     <label htmlFor="category_field">Category</label>
-                                    <select className="form-control" id="category_field" value={category} onChange={(e) => setCategory(e.target.value)}>
+                                    <select className="form-control" id="category_field" {...formik.getFieldProps('category')}>
                                         {categories.map(category => (
                                             <option key={category} value={category} >{category}</option>
                                         ))}
 
                                     </select>
+                                    {formik.touched.category && formik.errors.category && <div className="text-danger small">{formik.errors.category}</div>}
                                 </div>
                                 <div className="form-group">
                                     <label htmlFor="stock_field">Stock</label>
@@ -190,9 +169,9 @@ const NewProduct = () => {
                                         type="number"
                                         id="stock_field"
                                         className="form-control"
-                                        value={stock}
-                                        onChange={(e) => setStock(e.target.value)}
+                                        {...formik.getFieldProps('stock')}
                                     />
+                                    {formik.touched.stock && formik.errors.stock && <div className="text-danger small">{formik.errors.stock}</div>}
                                 </div>
 
                                 <div className="form-group">
@@ -201,9 +180,9 @@ const NewProduct = () => {
                                         type="text"
                                         id="seller_field"
                                         className="form-control"
-                                        value={seller}
-                                        onChange={(e) => setSeller(e.target.value)}
+                                        {...formik.getFieldProps('seller')}
                                     />
+                                    {formik.touched.seller && formik.errors.seller && <div className="text-danger small">{formik.errors.seller}</div>}
                                 </div>
 
                                 <div className='form-group'>
@@ -215,6 +194,7 @@ const NewProduct = () => {
                                             name='images'
                                             className='custom-file-input'
                                             id='customFile'
+                                            accept='image/*'
                                             onChange={onChange}
                                             multiple
                                         />
@@ -234,7 +214,7 @@ const NewProduct = () => {
                                     id="login_button"
                                     type="submit"
                                     className="btn btn-block py-3"
-                                // disabled={loading ? true : false}
+                                    disabled={loading ? true : false}
                                 >
                                     CREATE
                                 </button>

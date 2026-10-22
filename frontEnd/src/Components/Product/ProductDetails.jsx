@@ -4,34 +4,28 @@ import MetaData from '../Layout/MetaData'
 import { Carousel } from 'react-bootstrap'
 
 import 'react-toastify/dist/ReactToastify.css';
-import axios from 'axios'
 import ListReviews from '../Review/ListReviews';
 
-import { getUser, getToken, successMsg, errMsg } from '../Utils/helpers'
+import { successMsg, errMsg } from '../Utils/helpers'
 import { useDispatch, useSelector } from 'react-redux'
-import { getProductDetails, clearErrors, } from '../../actions/productActions'
+import { getProductDetails, newReview, clearErrors, } from '../../actions/productActions'
 import { addItemToCart } from '../../actions/cartActions'
+import { NEW_REVIEW_RESET } from '../../constants/productConstants'
+
 const ProductDetails = () => {
-    // const [product, setProduct] = useState({})
     const { loading, error, product } = useSelector(state => state.productDetails);
+    const { user } = useSelector(state => state.auth);
+    const { error: reviewError, success: reviewSuccess } = useSelector(state => state.newReview);
     const [quantity, setQuantity] = useState(1)
-    const [user, setUser] = useState(getUser())
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState('')
-    const [errorReview, setErrorReview] = useState('');
-    const [success, setSuccess] = useState('')
     let { id } = useParams()
     const dispatch = useDispatch()
-    // const productDetails = async (id) => {
-    //     let link = `http://localhost:4001/api/v1/product/${id}`
-    //     try {
-    //         let res = await axios.get(link)
-    //         setProduct(res.data.product)
-    //     } catch (err) {
-    //         console.log(err)
-    //         // setError('Product not found')
-    //     }
-    // }
+
+    // the logged-in user's own review of this product (if any), so it can be edited
+    const myReview = user && product.reviews
+        ? product.reviews.find(review => review.user === user._id)
+        : null
 
     const increaseQty = () => {
         const count = document.querySelector('.count')
@@ -49,75 +43,42 @@ const ProductDetails = () => {
 
     const addToCart = async () => {
         await dispatch(addItemToCart(id, quantity));
-
+        successMsg('Item added to cart')
     }
 
-    function setUserRatings() {
-        const stars = document.querySelectorAll('.star');
-        stars.forEach((star, index) => {
-            star.starValue = index + 1;
-            ['click', 'mouseover', 'mouseout'].forEach(function (e) {
-                star.addEventListener(e, showRatings);
-            })
-        })
-        function showRatings(e) {
-            stars.forEach((star, index) => {
-                if (e.type === 'click') {
-                    if (index < this.starValue) {
-                        star.classList.add('orange');
-                        setRating(this.starValue)
-                    } else {
-                        star.classList.remove('orange')
-                    }
-                }
-                if (e.type === 'mouseover') {
-                    if (index < this.starValue) {
-                        star.classList.add('yellow');
-                    } else {
-                        star.classList.remove('yellow')
-                    }
-                }
-                if (e.type === 'mouseout') {
-                    star.classList.remove('yellow')
-                }
-            })
-        }
-    }
-
-    const newReview = async (reviewData) => {
-        try {
-            const config = {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${getToken()}`
-                }
-            }
-
-            const { data } = await axios.put(`${import.meta.env.VITE_API}/review`, reviewData, config)
-            setSuccess(data.success)
-
-        } catch (error) {
-            setErrorReview(error.response.data.message)
-        }
+    // fill the review form with the user's old review, or start empty
+    const openReviewForm = () => {
+        setRating(myReview ? myReview.rating : 0)
+        setComment(myReview ? myReview.comment : '')
     }
 
     const reviewHandler = () => {
+        if (rating === 0 || comment.trim() === '') {
+            errMsg('Please choose a rating and write a comment')
+            return
+        }
         const formData = new FormData();
         formData.set('rating', rating);
         formData.set('comment', comment);
         formData.set('productId', id);
-        newReview(formData)
-
+        dispatch(newReview(formData))
     }
 
     useEffect(() => {
         dispatch(getProductDetails(id))
-
     }, [id,]);
 
-    // useEffect(() => {
-    //     localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    // }, [cartItems]);
+    useEffect(() => {
+        if (reviewError) {
+            errMsg(reviewError)
+            dispatch(clearErrors())
+        }
+        if (reviewSuccess) {
+            successMsg('Review saved')
+            dispatch({ type: NEW_REVIEW_RESET })
+            dispatch(getProductDetails(id))
+        }
+    }, [dispatch, id, reviewError, reviewSuccess]);
 
     return (
         <>
@@ -127,7 +88,7 @@ const ProductDetails = () => {
                     <Carousel pause='hover'>
                         {product.images && product.images.map(image => (
                             <Carousel.Item key={image.public_id}>
-                                <img className="d-block w-100" src={image.url} alt={product.title} />
+                                <img className="d-block w-100" src={image.url} alt={product.name} />
                             </Carousel.Item>
                         ))}
                     </Carousel>
@@ -148,11 +109,6 @@ const ProductDetails = () => {
 
                     <p id="product_price">${product.price}</p>
                     <div className="stockCounter d-inline">
-                        {/* <span className="btn btn-danger minus" >-</span>
-
-                        <input type="number" className="form-control count d-inline" readOnly />
-
-                        <span className="btn btn-primary plus" >+</span> */}
                         <span className="btn btn-danger minus" onClick={decreaseQty}>-</span>
 
                         <input type="number" className="form-control count d-inline" value={quantity} readOnly />
@@ -173,54 +129,12 @@ const ProductDetails = () => {
                     <p>{product.description}</p>
                     <hr />
                     <p id="product_seller mb-3">Sold by: <strong>{product.seller}</strong></p>
-                    {/* <div className="alert alert-danger mt-5" type='alert'>Login to post your review.</div>
-                    <button id="review_btn" type="button" className="btn btn-primary mt-4" data-toggle="modal" data-target="#ratingModal"  >
-                        Submit Your Review
-                    </button> */}
-                    {user ? <button id="review_btn" type="button" className="btn btn-primary mt-4" data-toggle="modal" data-target="#ratingModal" onClick={setUserRatings} >
-                        Submit Your Review
+
+                    {user ? <button id="review_btn" type="button" className="btn btn-primary mt-4" data-toggle="modal" data-target="#ratingModal" onClick={openReviewForm} >
+                        {myReview ? 'Edit Your Review' : 'Submit Your Review'}
                     </button> :
                         <div className="alert alert-danger mt-5" type='alert'>Login to post your review.</div>}
 
-                    {/* <div className="row mt-2 mb-5">
-                        <div className="rating w-50">
-
-                            <div className="modal fade" id="ratingModal" tabIndex="-1" role="dialog" aria-labelledby="ratingModalLabel" aria-hidden="true">
-                                <div className="modal-dialog" role="document">
-                                    <div className="modal-content">
-                                        <div className="modal-header">
-                                            <h5 className="modal-title" id="ratingModalLabel">Submit Review</h5>
-                                            <button type="button" className="close" data-dismiss="modal" aria-label="Close">
-                                                <span aria-hidden="true">&times;</span>
-                                            </button>
-                                        </div>
-                                        <div className="modal-body">
-
-                                            <ul className="stars" >
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                            </ul>
-
-                                            <textarea
-                                                name="review"
-                                                id="review" className="form-control mt-3"
-
-
-                                            >
-                                            </textarea>
-
-
-                                            <button className="btn my-3 float-right review-btn px-4 text-white" data-dismiss="modal" aria-label="Close" >Submit</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div> */}
                     <div className="row mt-2 mb-5">
                         <div className="rating w-50">
 
@@ -228,7 +142,7 @@ const ProductDetails = () => {
                                 <div className="modal-dialog" role="document">
                                     <div className="modal-content">
                                         <div className="modal-header">
-                                            <h5 className="modal-title" id="ratingModalLabel">Submit Review</h5>
+                                            <h5 className="modal-title" id="ratingModalLabel">{myReview ? 'Edit Review' : 'Submit Review'}</h5>
                                             <button type="button" className="close" data-dismiss="modal" aria-label="Close">
                                                 <span aria-hidden="true">&times;</span>
                                             </button>
@@ -236,11 +150,15 @@ const ProductDetails = () => {
                                         <div className="modal-body">
 
                                             <ul className="stars" >
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
-                                                <li className="star"><i className="fa fa-star"></i></li>
+                                                {[1, 2, 3, 4, 5].map(star => (
+                                                    <li
+                                                        key={star}
+                                                        className={`star ${star <= rating ? 'orange' : ''}`}
+                                                        onClick={() => setRating(star)}
+                                                    >
+                                                        <i className="fa fa-star"></i>
+                                                    </li>
+                                                ))}
                                             </ul>
 
                                             <textarea

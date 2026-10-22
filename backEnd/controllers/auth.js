@@ -22,14 +22,6 @@ exports.registerUser = async (req, res, next) => {
             url: result.secure_url
         },
     })
-    //test token
-    // const token = user.getJwtToken();
-
-    // return res.status(201).json({
-    //     success: true,
-    //     user,
-    //     token
-    // })
     sendToken(user, 200, res)
 }
 
@@ -38,7 +30,7 @@ exports.loginUser = async (req, res, next) => {
 
     // Checks if email and password is entered by user
     if (!email || !password) {
-        return res.status(400).json({ error: 'Please enter email & password' })
+        return res.status(400).json({ message: 'Please enter email & password' })
     }
 
 
@@ -57,21 +49,47 @@ exports.loginUser = async (req, res, next) => {
     if (!isPasswordMatched) {
         return res.status(401).json({ message: 'Invalid Email or Password' })
     }
-    const token = user.getJwtToken();
-
-    // res.status(201).json({
-    //     success: true,
-    //     token,
-    //     user
-    // });
     user = await User.findOne({ email })
+    sendToken(user, 200, res)
+}
+
+// Login with Google: the frontend sends the Google ID token (credential),
+// Google verifies it for us, then we find or create the user and send our own cookie token
+exports.googleLogin = async (req, res, next) => {
+    const { credential } = req.body;
+    if (!credential) {
+        return res.status(400).json({ message: 'Google credential is required' })
+    }
+
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`)
+    const profile = await response.json()
+
+    // the token must be valid, made for our app, and the email must be verified
+    if (!response.ok || profile.aud !== process.env.GOOGLE_CLIENT_ID || profile.email_verified !== 'true') {
+        return res.status(401).json({ message: 'Invalid Google login' })
+    }
+
+    let user = await User.findOne({ email: profile.email })
+    if (!user) {
+        const newUser = await User.create({
+            name: (profile.name || profile.email).substring(0, 30),
+            email: profile.email,
+            // Google users never type this password, it only satisfies the User model
+            password: crypto.randomBytes(16).toString('hex'),
+            avatar: {
+                public_id: 'google_avatar',
+                url: profile.picture || '/images/default_avatar.jpg'
+            }
+        })
+        user = await User.findById(newUser._id)
+    }
     sendToken(user, 200, res)
 }
 
 exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email: req.body.email });
     if (!user) {
-        return res.status(404).json({ error: 'User not found with this email' })
+        return res.status(404).json({ message: 'User not found with this email' })
 
     }
     // Get reset token
@@ -83,7 +101,7 @@ exports.forgotPassword = async (req, res, next) => {
     try {
         await sendEmail({
             email: user.email,
-            subject: 'ShopIT Password Recovery',
+            subject: 'MotoShop Password Recovery',
             message
         })
 
@@ -96,7 +114,7 @@ exports.forgotPassword = async (req, res, next) => {
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
         await user.save({ validateBeforeSave: false });
-        return res.status(500).json({ error: error.message })
+        return res.status(500).json({ message: error.message })
 
     }
 }
@@ -135,7 +153,6 @@ exports.resetPassword = async (req, res, next) => {
 
 exports.getUserProfile = async (req, res, next) => {
     const user = await User.findById(req.user.id);
-    console.log(user)
 
     return res.status(200).json({
         success: true,
@@ -153,10 +170,8 @@ exports.updateProfile = async (req, res, next) => {
     // Update avatar
     if (req.body.avatar !== '') {
         let user = await User.findById(req.user.id)
-        // console.log(user)
         const image_id = user.avatar.public_id;
         const res = await cloudinary.v2.uploader.destroy(image_id);
-        // console.log("Res", res)
         const result = await cloudinary.v2.uploader.upload(req.body.avatar, {
             folder: 'avatars',
             width: 150,
@@ -191,13 +206,6 @@ exports.updatePassword = async (req, res, next) => {
     }
     user.password = req.body.password;
     await user.save();
-    // const token = user.getJwtToken();
-
-    // return res.status(201).json({
-    //     success: true,
-    //     user,
-    //     token
-    // });
     sendToken(user, 200, res)
 
 }
@@ -215,7 +223,6 @@ exports.deleteUser = async (req, res, next) => {
 
     if (!user) {
         return res.status(401).json({ message: `User does not found with id: ${req.params.id}` })
-        // return next(new ErrorHandler(`User does not found with id: ${req.params.id}`))
     }
 
     // Remove avatar from cloudinary
@@ -232,7 +239,6 @@ exports.getUserDetails = async (req, res, next) => {
 
     if (!user) {
         return res.status(400).json({ message: `User does not found with id: ${req.params.id}` })
-        // return next(new ErrorHandler(`User does not found with id: ${req.params.id}`))
     }
 
     res.status(200).json({
@@ -251,7 +257,6 @@ exports.updateUser = async (req, res, next) => {
     const user = await User.findByIdAndUpdate(req.params.id, newUserData, {
         new: true,
         runValidators: true,
-        // useFindAndModify: false
     })
 
     return res.status(200).json({

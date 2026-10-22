@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import MetaData from '../Layout/MetaData'
 import { useNavigate } from "react-router-dom";
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
 import { updateProfile, loadUser, clearErrors } from '../../actions/userActions'
 
 import { UPDATE_PROFILE_RESET } from '../../constants/userConstants'
 import { useDispatch, useSelector } from 'react-redux'
-
-// import { getToken } from '../Utils/helpers';
 
 
 const UpdateProfile = () => {
@@ -17,86 +16,44 @@ const UpdateProfile = () => {
     const { user } = useSelector(state => state.auth);
     const { error, isUpdated, loading } = useSelector(state => state.user)
 
-
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
     const [avatar, setAvatar] = useState('')
     const [avatarPreview, setAvatarPreview] = useState('/images/default_avatar.jpg')
-    // const [error, setError] = useState('')
-    // const [user, setUser] = useState({})
-    // const [loading, setLoading] = useState(false)
-    // const [isUpdated, setIsUpdated] = useState(false)
     let navigate = useNavigate();
 
-    // const getProfile = async () => {
-    //     const config = {
-    //         headers: {
-    //             'Content-Type': 'application/json',
-    //             'Authorization': `Bearer ${getToken()}`
-    //         }
-    //     }
-    //     try {
-    //         const { data } = await axios.get(`${import.meta.env.VITE_API}/me`, config)
-    //         console.log(data)
-    //         setUser(data.user)
-    //         setName(data.user.name);
-    //         setEmail(data.user.email);
-    //         setAvatarPreview(data.user.avatar.url)
-    //         setLoading(false)
-    //     } catch (error) {
-    //         console.log(error)
-    //         toast.error('user not found', {
-    //             position: 'bottom-right'
-    //         });
-    //     }
-    // }
-
-    // const updateProfile = async (userData) => {
-    //     const config = {
-    //         headers: {
-    //             'Content-Type': 'multipart/form-data',
-    //             'Authorization': `Bearer ${getToken()}`
-    //         }
-    //     }
-    //     try {
-    //         const { data } = await axios.put(`${import.meta.env.VITE_API}/me/update`, userData, config)
-    //         setIsUpdated(data.success)
-    //         setLoading(false)
-    //         toast.success('user updated', {
-    //             position: 'bottom-right'
-    //         });
-    //         getProfile();
-    //         navigate('/me', { replace: true })
-
-
-    //     } catch (error) {
-    //         console.log(error)
-    //         toast.error('user not found', {
-    //             position: 'bottom-right'
-    //         });
-    //     }
-    // }
-
-    // console.log(error)
-    // useEffect(() => {
-    //     getProfile()
-
-    // }, [])
+    // form values and validation rules (Formik + Yup), filled in when the user loads
+    const formik = useFormik({
+        enableReinitialize: true,
+        initialValues: {
+            name: user ? user.name : '',
+            email: user ? user.email : '',
+        },
+        validationSchema: Yup.object({
+            name: Yup.string().trim().required('Name is required').max(30, 'Name cannot exceed 30 characters'),
+            email: Yup.string().trim().email('Enter a valid email address').required('Email is required'),
+        }),
+        onSubmit: (values) => {
+            const formData = new FormData();
+            formData.set('name', values.name);
+            formData.set('email', values.email);
+            formData.set('avatar', avatar);
+            dispatch(updateProfile(formData))
+        }
+    })
 
     useEffect(() => {
-        console.log(user)
         if (user) {
-            setName(user.name);
-            setEmail(user.email);
             setAvatarPreview(user.avatar.url)
         }
         if (error) {
-            // alert.error(error);
-            console.log(error)
+            toast.error(error, {
+                position: 'bottom-right'
+            });
             dispatch(clearErrors());
         }
         if (isUpdated) {
-            // alert.success('User updated successfully')
+            toast.success('Profile updated successfully', {
+                position: 'bottom-right'
+            });
             dispatch(loadUser());
             navigate('/me', { replace: true })
             dispatch({
@@ -104,15 +61,6 @@ const UpdateProfile = () => {
             })
         }
     }, [dispatch, error, isUpdated, navigate, user])
-
-    const submitHandler = (e) => {
-        e.preventDefault();
-        const formData = new FormData();
-        formData.set('name', name);
-        formData.set('email', email);
-        formData.set('avatar', avatar);
-        dispatch(updateProfile(formData))
-    }
 
     const onChange = e => {
         const reader = new FileReader();
@@ -127,7 +75,6 @@ const UpdateProfile = () => {
         reader.readAsDataURL(e.target.files[0])
 
     }
-    // console.log(user)
 
 
     return (
@@ -136,19 +83,18 @@ const UpdateProfile = () => {
 
             <div className="row wrapper">
                 <div className="col-10 col-lg-5">
-                    <form className="shadow-lg" onSubmit={submitHandler} encType='multipart/form-data'>
+                    <form className="shadow-lg" onSubmit={formik.handleSubmit} encType='multipart/form-data'>
                         <h1 className="mt-2 mb-5">Update Profile</h1>
 
                         <div className="form-group">
-                            <label htmlFor="email_field">Name</label>
+                            <label htmlFor="name_field">Name</label>
                             <input
-                                type="name"
+                                type="text"
                                 id="name_field"
                                 className="form-control"
-                                name='name'
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                {...formik.getFieldProps('name')}
                             />
+                            {formik.touched.name && formik.errors.name && <div className="text-danger small">{formik.errors.name}</div>}
                         </div>
 
                         <div className="form-group">
@@ -157,10 +103,9 @@ const UpdateProfile = () => {
                                 type="email"
                                 id="email_field"
                                 className="form-control"
-                                name='email'
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                {...formik.getFieldProps('email')}
                             />
+                            {formik.touched.email && formik.errors.email && <div className="text-danger small">{formik.errors.email}</div>}
                         </div>
 
                         <div className='form-group'>

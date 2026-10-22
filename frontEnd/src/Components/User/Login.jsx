@@ -1,61 +1,41 @@
-import React, { useState, useEffect } from 'react'
-import { Link, useNavigate, useLocation, useParams } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 
 import Loader from '../Layout/Loader'
 import MetaData from '../Layout/MetaData';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-// import axios from 'axios';
-// import { getUser, authenticate } from '../Utils/helpers';
+import { useFormik } from 'formik'
+import * as Yup from 'yup'
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
 import { useDispatch, useSelector } from 'react-redux'
-import { login, clearErrors } from '../../actions/userActions'
+import { login, googleLogin, clearErrors } from '../../actions/userActions'
+
+// the Google button only appears when a client ID is set in frontEnd/.env
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 const Login = () => {
     const { isAuthenticated, error, loading, } = useSelector(state => state.auth)
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    // const [loading, setLoading] = useState(false)
     let navigate = useNavigate()
     let location = useLocation()
     const dispatch = useDispatch()
 
-    const submitHandler = (e) => {
-        e.preventDefault();
-        dispatch(login(email, password))
-    }
-
-    // const login = async (email, password) => {
-    //     try {
-    //         const config = {
-    //             headers: {
-    //                 'Content-Type': 'application/json'
-    //             }
-    //         }
-    //         const { data } = await axios.post(`http://localhost:4001/api/v1/login`, { email, password }, config)
-    //         console.log(data)
-    //         authenticate(data, () => navigate("/"))
-
-    //     } catch (error) {
-
-    //         toast.error("invalid user or password", {
-    //             position: 'bottom-right'
-    //         })
-    //     }
-    // }
+    // form values and validation rules (Formik + Yup)
+    const formik = useFormik({
+        initialValues: {
+            email: '',
+            password: '',
+        },
+        validationSchema: Yup.object({
+            email: Yup.string().trim().email('Enter a valid email address').required('Email is required'),
+            password: Yup.string().required('Password is required').min(6, 'Password must be at least 6 characters'),
+        }),
+        onSubmit: (values) => {
+            dispatch(login(values.email, values.password))
+        }
+    })
 
     const redirect = location.search ? new URLSearchParams(location.search).get('redirect') : ''
-    console.log(redirect)
-    // useEffect(() => {
-    //     if (getUser()) {
-    //         navigate('/')
-    //     }
-    // }, [])
-
-    // useEffect(() => {
-    //     if (getUser() && redirect === 'shipping') {
-    //         navigate(`/${redirect}`)
-    //     }
-    // }, [])
 
     useEffect(() => {
         if (isAuthenticated && redirect === 'shipping') {
@@ -64,8 +44,9 @@ const Login = () => {
         else if (isAuthenticated)
             navigate('/')
         if (error) {
-            // alert.error(error);
-            console.log(error)
+            toast.error(error, {
+                position: 'bottom-right'
+            });
             dispatch(clearErrors());
         }
     }, [error, isAuthenticated, dispatch, navigate, redirect])
@@ -79,7 +60,7 @@ const Login = () => {
                     <div className="row wrapper">
                         <div className="col-10 col-lg-5">
                             <form className="shadow-lg"
-                                onSubmit={submitHandler}
+                                onSubmit={formik.handleSubmit}
                             >
                                 <h1 className="mb-3">Login</h1>
                                 <div className="form-group">
@@ -88,9 +69,9 @@ const Login = () => {
                                         type="email"
                                         id="email_field"
                                         className="form-control"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        {...formik.getFieldProps('email')}
                                     />
+                                    {formik.touched.email && formik.errors.email && <div className="text-danger small">{formik.errors.email}</div>}
                                 </div>
 
                                 <div className="form-group">
@@ -99,9 +80,9 @@ const Login = () => {
                                         type="password"
                                         id="password_field"
                                         className="form-control"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        {...formik.getFieldProps('password')}
                                     />
+                                    {formik.touched.password && formik.errors.password && <div className="text-danger small">{formik.errors.password}</div>}
                                 </div>
 
                                 <Link to="/password/forgot" className="float-right mb-4">Forgot Password?</Link>
@@ -115,6 +96,17 @@ const Login = () => {
                                 </button>
 
                                 <Link to="/register" className="float-right mt-3">New User?</Link>
+
+                                {googleClientId && (
+                                    <div className="mt-5 d-flex justify-content-center">
+                                        <GoogleOAuthProvider clientId={googleClientId}>
+                                            <GoogleLogin
+                                                onSuccess={(response) => dispatch(googleLogin(response.credential))}
+                                                onError={() => toast.error('Google login failed', { position: 'bottom-right' })}
+                                            />
+                                        </GoogleOAuthProvider>
+                                    </div>
+                                )}
                             </form>
                         </div>
                     </div>
